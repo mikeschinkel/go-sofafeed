@@ -168,7 +168,7 @@ go test ./...
 
 ## License
 
-[License Type] - see LICENSE file for details
+- [**MIT**](https://mit-license.org/) - see LICENSE file for details
 
 ## Credits
 
