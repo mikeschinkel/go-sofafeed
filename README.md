@@ -61,7 +61,6 @@ func main() {
     fmt.Printf("Latest iOS: %s\n", iosFeed.OSVersions[0].Latest.ProductVersion)
 }
 ```
-
 ### Parsing Local Feed Data
 
 ```go
@@ -94,7 +93,6 @@ func main() {
     }
 }
 ```
-
 ### Working with Security Information
 
 ```go
@@ -129,6 +127,94 @@ func main() {
     }
 }
 ```
+### Customizing the HTTP Client
+
+You can provide your own `http.Client` to control timeouts, transport settings, or add custom behaviors:
+
+```go
+package main
+
+import (
+    "context"
+    "crypto/tls"
+    "net/http"
+    "time"
+    "github.com/mikeschinkel/go-sofafeed"
+    "github.com/mikeschinkel/go-sofafeed/feeds"
+)
+
+func main() {
+    // Create a custom HTTP client with specific settings
+    client := &http.Client{
+        Timeout: 45 * time.Second,
+        Transport: &http.Transport{
+            TLSClientConfig: &tls.Config{
+                MinVersion: tls.VersionTLS12,
+            },
+            MaxIdleConns:        100,
+            MaxIdleConnsPerHost: 100,
+            IdleConnTimeout:     90 * time.Second,
+        },
+    }
+
+    // Pass the client via FetchArgs
+    args := &feeds.FetchArgs{
+        Client: client,
+    }
+
+    // Use the custom client for fetching
+    feed, err := sofafeed.FetchAndParseMacOSFeed(context.Background(), args)
+    if err != nil {
+        panic(err)
+    }
+   fmt.Printf("Latest macOS: %s\n", feed.OSVersions[0].Latest.ProductVersion)
+}
+```
+### Using Custom Feed URLs
+
+For enterprise environments, you might want to use locally cached or security-approved feed URLs. You can set custom URLs when creating feed instances:
+
+```go
+package main
+
+import (
+   "context"
+   "fmt"
+   "github.com/mikeschinkel/go-sofafeed"
+   "github.com/mikeschinkel/go-sofafeed/feeds"
+)
+
+func main() {
+   // Create context and fetch arguments with custom URL
+   ctx := context.Background()
+   args := &feeds.FetchArgs{
+     FeedURL: "https://internal-cache.company.com/approved-feeds/macos_data_feed.json",
+   }
+   
+   // Fetch macOS feed using custom URL
+   macFeed, err := sofafeed.FetchAndParseMacOSFeed(ctx, args)
+   if err != nil {
+     panic(err)
+   }
+   
+   // Similarly for iOS feed
+   args.FeedURL = "https://internal-cache.company.com/approved-feeds/ios_data_feed.json"
+   iosFeed, err := sofafeed.FetchAndParseIOSFeed(ctx, args)
+   if err != nil {
+     panic(err)
+   }
+   
+   // Access feed data as needed
+   fmt.Printf("Latest macOS: %s\n", macFeed.OSVersions[0].Latest.ProductVersion)
+   fmt.Printf("Latest iOS: %s\n", iosFeed.OSVersions[0].Latest.ProductVersion)
+}
+```
+
+This approach is particularly useful when:
+- You need to cache feeds locally to reduce external requests
+- Your security policy requires feeds to be reviewed before use
+- You're operating in an air-gapped environment
+- You want to add rate limiting or monitoring at your proxy
 
 ## Feed Structure
 
