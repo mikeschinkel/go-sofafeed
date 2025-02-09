@@ -1,4 +1,4 @@
-package sofafeed
+package feeds
 
 import "errors"
 
@@ -17,4 +17,7 @@ var (
 
 	// ErrReadResponseBody represents an error when reading the response body
 	ErrReadResponseBody = errors.New("failed to read response body")
+
+	// ErrCheckFeedType represents an error when an invalid feed type is passed
+	ErrCheckFeedType = errors.New(`invalid feed type; expected 'macos' or 'ios'`)
 )

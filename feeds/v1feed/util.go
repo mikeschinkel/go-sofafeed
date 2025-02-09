@@ -1,4 +1,4 @@
-package sofafeed
+package v1feed
 
 import (
 	"io"

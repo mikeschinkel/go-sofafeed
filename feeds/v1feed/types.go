@@ -1,7 +1,10 @@
 package v1feed
 
-type ModelMap map[string]Model
+// Models maps device identifiers to their details
+type Models map[string]Model
 
-type CVEMap map[string]bool
+// CVEs maps CVE identifiers to their status
+type CVEs map[string]bool
 
-type IdentifierMap map[string]string
+// Identifiers maps identifier types to their values
+type Identifiers map[string]string

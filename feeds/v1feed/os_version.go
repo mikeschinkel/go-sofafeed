@@ -1,8 +1,13 @@
 package v1feed
 
+// OSVersion contains information about a specific OS version
 type OSVersion struct {
-	OSVersion        string             `json:"OSVersion"`
-	Latest           OSVersionDetails   `json:"Latest"`
+	// OSVersion is the major version number
+	OSVersion string `json:"OSVersion"`
+	// Latest contains information about the most recent release
+	Latest OSVersionDetails `json:"Latest"`
+	// SecurityReleases contains information about security updates
 	SecurityReleases []SecurityReleases `json:"SecurityReleases"`
-	SupportedModels  []SupportedModel   `json:"SupportedModels"`
+	// SupportedModels lists compatible device models (macOS-specific)
+	SupportedModels []SupportedModel `json:"SupportedModels,omitempty"`
 }

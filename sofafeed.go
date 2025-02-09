@@ -2,95 +2,79 @@ package sofafeed
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"net/http"
 
-	"github.com/mikeschinkel/go-sofafeed/feeds/v1feed"
+	"github.com/mikeschinkel/go-sofafeed/feeds"
 )
 
 // Parse parses JSON feed data from bytes
-func Parse(data []byte) (*v1feed.Feed, error) {
-	var feed v1feed.Feed
-	err := json.Unmarshal(data, &feed)
+func Parse(ft FeedType, data []byte) (feeds.Feed, error) {
+	var result feeds.ParseResult
+	feed, err := getFeed(ft)
 	if err != nil {
-		err = errors.Join(ErrParseFeed, err)
 		goto end
 	}
+	result, err = feed.Parse(data)
+	if err != nil {
+		goto end
+	}
+	feed.SetParseResult(result)
 end:
-	return &feed, err
+	return feed, err
 }
 
 // ParseString parses JSON feed data from a string
-func ParseString(data string) (*v1feed.Feed, error) {
-	return Parse([]byte(data))
+func ParseString(ft FeedType, data string) (feeds.Feed, error) {
+	return Parse(ft, []byte(data))
 }
 
 // FetchAndParse retrieves and parses the latest feed
-func FetchAndParse(ctx context.Context, client *http.Client) (feed *v1feed.Feed, err error) {
+func FetchAndParse(ctx context.Context, ft FeedType, args *feeds.FetchArgs) (feed feeds.Feed, err error) {
 	var data []byte
-	data, err = Fetch(ctx, client)
+	var result feeds.ParseResult
+
+	feed, err = getFeed(ft)
 	if err != nil {
 		goto end
 	}
-
-	feed, err = Parse(data)
+	data, err = feed.Fetch(ctx, args)
 	if err != nil {
 		goto end
 	}
-
+	result, err = feed.Parse(data)
+	if err != nil {
+		goto end
+	}
+	feed.SetParseResult(result)
 end:
 	return feed, err
 }
 
 // Fetch retrieves the latest JSON from sofafeed.Endpoint. If client is nil, a
 // default client with a 30-second timeout will be used.
-func Fetch(ctx context.Context, client *http.Client) (body []byte, err error) {
-	var req *http.Request
-	var resp *http.Response
-	// Create a default client if none provided
-	if client == nil {
-		client = &http.Client{
-			Timeout: Timeout,
-		}
-	}
-
-	// Create the request with the provided context
-	req, err = http.NewRequestWithContext(ctx, http.MethodGet, Endpoint, nil)
+func Fetch(ctx context.Context, ft FeedType, args *feeds.FetchArgs) (body []byte, err error) {
+	feed, err := getFeed(ft)
 	if err != nil {
-		err = errors.Join(ErrFetchRequest, err)
 		goto end
 	}
-
-	// Set headers for better HTTP citizenship
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", "go-sofafeed/1.0")
-
-	// Perform the request
-	resp, err = client.Do(req)
-	if err != nil {
-		err = errors.Join(ErrPerformRequest, err)
-		goto end
-	}
-	defer mustClose(resp.Body)
-
-	// Check for non-200 status codes
-	if resp.StatusCode != http.StatusOK {
-		err = errors.Join(
-			ErrUnexpectedStatusCode,
-			errors.New(fmt.Sprintf("status_code=%d", resp.StatusCode)),
-		)
-		goto end
-	}
-
-	// Read the entire response body
-	body, err = io.ReadAll(resp.Body)
-	if err != nil {
-		err = errors.Join(ErrReadResponseBody, err)
-		goto end
-	}
+	args.FeedURL = feed.URL()
+	body, err = feed.Fetch(ctx, args)
 end:
 	return body, err
+}
+
+func getFeed(ft FeedType) (feed feeds.Feed, err error) {
+	switch ft {
+	case IOS:
+		feed = NewIOSFeed()
+	case MacOS:
+		feed = NewMacOSFeed()
+	default:
+		err = errors.Join(
+			feeds.ErrCheckFeedType,
+			fmt.Errorf("%s=%s", feeds.FeedTypeErrArg, ft),
+		)
+	}
+	return feed, err
 }
